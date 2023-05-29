@@ -18,23 +18,27 @@ const logger = require("firebase-functions/logger");
 //   response.send("Hello from Firebase!");
 // });
 
+// Require dependencies
 const functions = require('firebase-functions');
 const express = require('express');
 var engines = require('consolidate');
 const hbs = require('handlebars');
 const admin = require('firebase-admin');
 
+// Express set up
 const app = express();
 app.engine('hbs', engines.handlebars);
 app.set('views', './views');
 app.set('view engine', 'hbs');
 
+// Firebase connection
 var serviceAccount = require("./credentials.json");
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://jdme-f3de7-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
+// Get item from Firestore database
 async function getFirestore(){
     const firestore_con = await admin.firestore();
 
@@ -48,8 +52,45 @@ async function getFirestore(){
     return writeResult
 }
 
+async function getLastTenItems(){
+    const db = await admin.firestore();
+
+    const lastTenItems = await db.collection('questions').orderBy('date-added', 'desc').limit(10).get()
+
+    return lastTenItems;
+}
+
+async function insertFormData(request){
+    const writeResult = await
+        admin.firestore().collection('questions').add({
+            question: request.body.question,
+            answer: request.body.answer,
+            date: request.body.date,
+            difficulty: request.body.difficulty,
+            status: request.body.status,
+        })
+        .then(function() {console.log("Document successfully written!"+request.body.date);})
+        .catch(function(error) {console.error("Error writing document: ", error);});
+}
+
+// Basic routing
 app.get('/', async (request, response) => {
     var db_result = await getFirestore();
     response.render('index', {db_result});
 });
+
+app.get('/submit/', function (request, response) {
+    response.render('submit');
+})
+
+app.post('/insert-data', async (request, response) => {
+    var insert = await insertFormData(request);
+    response.sendStatus(200);
+});
+
+app.get('/questions', async (request, response) => {
+    response.render('questions');
+})
+
+// Run the app
 exports.app = functions.https.onRequest(app);
