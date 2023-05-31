@@ -20,10 +20,12 @@ const logger = require("firebase-functions/logger");
 
 // Require dependencies
 const functions = require('firebase-functions');
+const path = require('path')
 const express = require('express');
 var engines = require('consolidate');
 const hbs = require('handlebars');
 const admin = require('firebase-admin');
+const firestore_req = require('firebase-admin/firestore')
 
 // Express set up
 const app = express();
@@ -40,10 +42,10 @@ admin.initializeApp({
 
 // Get item from Firestore database
 async function getFirestore(){
-    const firestore_con = await admin.firestore();
+    const db = await admin.firestore();
 
     const writeResult =
-    firestore_con.collection('questions').doc('sample_question').get().then(doc => 
+    db.collection('questions').doc('sample_question').get().then(doc => 
         {
             if (!doc.exists) {console.log('No such document!');}
             else {return doc.data();}})
@@ -68,6 +70,8 @@ async function insertFormData(request){
             date: request.body.date,
             difficulty: request.body.difficulty,
             status: request.body.status,
+            hints: request.body.hints,
+            createdAt: firestore_req.FieldValue.serverTimestamp()
         })
         .then(function() {console.log("Document successfully written!"+request.body.date);})
         .catch(function(error) {console.error("Error writing document: ", error);});
